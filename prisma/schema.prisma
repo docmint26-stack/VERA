@@ -1,0 +1,1188 @@
+// VERA — Prisma ORM 7 schema (PostgreSQL)
+// Docs: docs/database/DATABASE_SCHEMA.md
+//
+// Conventions
+// - UUID primary keys for application entities (Better Auth owns its own ids).
+// - camelCase columns (Prisma default) — raw SQL must quote them.
+// - JSON only for genuinely flexible metadata (never for relational business data).
+// - Timestamps: createdAt / updatedAt on every mutable table.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum PlatformRole {
+  USER
+  VERIFIER
+  ORGANIZATION_ADMIN
+  PLATFORM_ADMIN
+}
+
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED
+  DELETION_REQUESTED
+  DELETED
+}
+
+enum ProfileVisibility {
+  PUBLIC
+  LINK_ONLY
+  PRIVATE
+}
+
+enum ContentVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum OrgRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum OrgStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+  REVOKED
+}
+
+enum UploadStatus {
+  PENDING
+  UPLOADING
+  PROCESSING
+  AVAILABLE
+  REJECTED
+  QUARANTINED
+  FAILED
+}
+
+enum ScanStatus {
+  PENDING
+  CLEAN
+  MALWARE
+  UNSAFE
+  ERROR
+}
+
+enum ShareResourceType {
+  FILE
+  FOLDER
+  PROFILE
+  ACHIEVEMENT
+  DOCUMENT
+}
+
+enum SharePermission {
+  READ
+}
+
+enum AchievementType {
+  PROJECT
+  EMPLOYMENT
+  EDUCATION
+  RESEARCH
+  COMPETITION
+  CERTIFICATION
+  TRAINING
+  COMMUNITY_CONTRIBUTION
+  OTHER
+}
+
+enum ClaimStatus {
+  CLAIMED
+  VERIFICATION_PENDING
+  VERIFIED
+  REJECTED
+  REVOKED
+}
+
+enum VerificationChannel {
+  ORGANIZATION
+  PLATFORM
+  EMAIL
+}
+
+enum VerificationStatus {
+  PENDING
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum CredentialStatus {
+  ISSUED
+  SUSPENDED
+  REVOKED
+  EXPIRED
+}
+
+enum RewardTransactionType {
+  EARN
+  REDEEM
+  ADJUST
+  REVERSAL
+}
+
+enum RewardTransactionStatus {
+  PENDING
+  POSTED
+  FAILED
+}
+
+enum NotificationType {
+  ACCOUNT_VERIFIED
+  FILE_UPLOADED
+  DOCUMENT_SAVED
+  ACHIEVEMENT_SUBMITTED
+  VERIFICATION_REQUEST_RECEIVED
+  CREDENTIAL_STATUS_UPDATED
+  SECURITY_EVENT
+  ORGANIZATION_INVITATION
+  SYSTEM
+}
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  DEAD
+}
+
+enum OutboxStatus {
+  PENDING
+  PROCESSING
+  PROCESSED
+  FAILED
+}
+
+enum ConsentPurpose {
+  TERMS
+  PRIVACY_POLICY
+  MARKETING
+  AI_DATA_ACCESS
+}
+
+enum IdempotencyStatus {
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum ChatRole {
+  SYSTEM
+  USER
+  ASSISTANT
+}
+
+enum DocumentStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum AiProviderKind {
+  OLLAMA
+  OPENAI_COMPAT
+  OPENAI
+  ANTHROPIC
+  OTHER
+}
+
+enum AiOperation {
+  CHAT
+  RETRIEVE
+  GENERATE_DOCUMENT
+}
+
+enum DocumentGenerationStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+enum AiResourceType {
+  DOCUMENT
+  FILE
+}
+
+enum EvidenceType {
+  LINK
+  FILE
+  TEXT
+}
+
+// ---------------------------------------------------------------------------
+// Authentication (Better Auth adapter contract — do not rename required fields)
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String        @id @default(cuid())
+  name          String
+  email         String        @unique
+  emailVerified Boolean       @default(false)
+  image         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Application extensions (safe to add: adapter ignores unknown columns).
+  role     PlatformRole @default(USER)
+  status   AccountStatus @default(ACTIVE)
+  slug     String?      @unique
+  lastLoginAt DateTime?
+
+  session      Session[]
+  account      Account[]
+  profile      UserProfile?
+  preference   UserPreference?
+  privacy      UserPrivacySetting?
+  skills       UserSkill[]
+  education    UserEducation[]
+  experience   UserExperience[]
+  socialLinks  UserSocialLink[]
+  consents     UserConsent[]
+
+  organizations        Organization[]           @relation("OrgCreator")
+  organizationMembers  OrganizationMember[]
+  organizationInvites  OrganizationInvitation[] @relation("InvitedByUser")
+
+  vaultFolders   VaultFolder[]
+  vaultFiles     VaultFile[]
+  storageUsage   StorageUsage?
+  documents      Document[]
+  achievements   Achievement[]
+  notifications  Notification[]
+  activity       ActivityEvent[]
+  auditLogs      AuditLog[]
+  shareLinks     ShareLink[]
+  rewardAccount  RewardAccount?
+  rewardTxns     RewardTransaction[]
+
+  chatConversations ChatConversation[]
+  aiUsage          AiUsageRecord[]
+  aiGrants         AiAccessGrant[]
+  genJobs          DocumentGenerationJob[]
+
+  verificationRequests VerificationRequest[] @relation("VerificationRequester")
+  verificationReviews  VerificationRequest[] @relation("VerificationVerifier")
+  credentials          CredentialRecord[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Account {
+  id                   String    @id @default(cuid())
+  accountId            String
+  providerId           String
+  userId               String
+  accessToken          String?
+  refreshToken         String?
+  idToken              String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                String?
+  password             String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([providerId, accountId])
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@index([expiresAt])
+}
+
+// ---------------------------------------------------------------------------
+// Profiles
+// ---------------------------------------------------------------------------
+
+model UserProfile {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  headline    String?
+  bio         String?
+  location    String? // coarse-grained (city / region), never precise coordinates
+  occupation  String?
+  avatarKey   String?
+  avatarContentType String?
+  avatarSizeBytes    Int?
+  avatarUpdatedAt    DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserPreference {
+  id         String   @id @default(uuid())
+  userId     String   @unique
+  locale     String   @default("en")
+  theme      String   @default("system") // light | dark | system
+  appearance String   @default("system") // light | dark | system
+  motion     String   @default("full") // full | reduced
+  emailDigest            Boolean @default(false)
+  opportunityAlerts      Boolean @default(true)
+  verificationUpdates    Boolean @default(true)
+  marketingEmails        Boolean @default(false)
+  securityEmails         Boolean @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserPrivacySetting {
+  id                  String          @id @default(uuid())
+  userId              String          @unique
+  profileVisibility   ProfileVisibility @default(PRIVATE)
+  achievementVisibility ContentVisibility @default(PRIVATE)
+  filesPrivateByDefault Boolean       @default(true)
+  discoverableBySearch  Boolean       @default(false)
+  allowAiDataAccess     Boolean       @default(false)
+  showLocation          Boolean       @default(false)
+  showEmail             Boolean       @default(false)
+  shareLinkDefaultTtlHours Int? // null = links do not expire by default (revocable)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserSkill {
+  id         String   @id @default(uuid())
+  userId     String
+  name       String
+  proficiency String? // beginner | intermediate | advanced | expert
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model UserEducation {
+  id          String    @id @default(uuid())
+  userId      String
+  institution String
+  degree      String?
+  field       String?
+  startDate   DateTime?
+  endDate     DateTime?
+  current     Boolean   @default(false)
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model UserExperience {
+  id             String    @id @default(uuid())
+  userId         String
+  organization   String
+  title          String
+  employmentType String? // full-time | part-time | contract | internship
+  location       String?
+  startDate      DateTime?
+  endDate        DateTime?
+  current        Boolean   @default(false)
+  description    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model UserSocialLink {
+  id        String   @id @default(uuid())
+  userId    String
+  platform  String // github | linkedin | x | website | ...
+  url       String
+  label     String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, url])
+  @@index([userId])
+}
+
+model UserConsent {
+  id        String        @id @default(uuid())
+  userId    String
+  purpose   ConsentPurpose
+  granted   Boolean
+  version   String
+  createdAt DateTime      @default(now())
+  revokedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, purpose, version])
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// Organizations
+// ---------------------------------------------------------------------------
+
+model Organization {
+  id                String    @id @default(uuid())
+  name              String
+  slug              String    @unique
+  description       String?
+  website           String?
+  logoKey           String?
+  status            OrgStatus @default(ACTIVE)
+  // Phase 4 will gate credential issuing on an approval workflow.
+  isVerifiedIssuer  Boolean   @default(false)
+  createdById       String
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  createdBy   User                   @relation("OrgCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  members     OrganizationMember[]
+  invitations OrganizationInvitation[]
+  verificationRequests VerificationRequest[]
+  credentials CredentialRecord[]
+
+  @@index([status, createdAt])
+}
+
+model OrganizationMember {
+  id             String   @id @default(uuid())
+  organizationId String
+  userId         String
+  role           OrgRole  @default(MEMBER)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+}
+
+model OrganizationInvitation {
+  id             String           @id @default(uuid())
+  organizationId String
+  email          String
+  role           OrgRole          @default(MEMBER)
+  token          String           @unique
+  status         InvitationStatus @default(PENDING)
+  invitedById    String
+  expiresAt      DateTime
+  createdAt      DateTime         @default(now())
+  respondedAt    DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedBy    User         @relation("InvitedByUser", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, status])
+  @@index([email, status])
+}
+
+// ---------------------------------------------------------------------------
+// Vault (private file storage)
+// ---------------------------------------------------------------------------
+
+model VaultFolder {
+  id        String    @id @default(uuid())
+  ownerId   String
+  parentId  String?
+  name      String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  owner  User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  parent VaultFolder? @relation("FolderTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children VaultFolder[] @relation("FolderTree")
+  files     VaultFile[]
+
+  @@unique([ownerId, parentId, name])
+  @@index([ownerId, deletedAt])
+}
+
+model VaultFile {
+  id             String       @id @default(uuid())
+  ownerId        String
+  folderId       String?
+  name           String // original filename (display)
+  storageKey     String       @unique // generated key — never derived from user input
+  mimeType       String
+  sizeBytes      BigInt
+  checksumSha256 String?
+  status         UploadStatus @default(PENDING)
+  scanStatus     ScanStatus   @default(PENDING)
+  scanEngine     String? // static-v1 | clamav | ...
+  scannedAt      DateTime?
+  scanMessage    String?
+  isStarred      Boolean      @default(false)
+  version        Int          @default(1)
+  uploadTokenHash  String?
+  uploadExpiresAt  DateTime?
+  expectedSizeBytes BigInt?
+  expectedMimeType String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  deletedAt      DateTime?
+  purgedAt       DateTime?
+
+  owner   User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  folder  VaultFolder?    @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  versions VaultFileVersion[]
+  grants   FileAccessGrant[]
+  evidence AchievementEvidence[]
+
+  @@index([ownerId, deletedAt, updatedAt])
+  @@index([ownerId, folderId, deletedAt])
+  @@index([status])
+}
+
+model VaultFileVersion {
+  id             String   @id @default(uuid())
+  fileId         String
+  version        Int
+  storageKey     String   @unique
+  sizeBytes      BigInt
+  checksumSha256 String?
+  mimeType       String
+  createdAt      DateTime @default(now())
+  createdBy      String?
+
+  file VaultFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@unique([fileId, version])
+}
+
+model FileAccessGrant {
+  id           String        @id @default(uuid())
+  fileId       String
+  granteeId    String? // explicit user-to-user grant
+  shareLinkId  String? // grant produced by a share link
+  permission   SharePermission @default(READ)
+  grantedById  String
+  expiresAt    DateTime?
+  createdAt    DateTime      @default(now())
+
+  file      VaultFile  @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  shareLink ShareLink? @relation(fields: [shareLinkId], references: [id], onDelete: Cascade)
+
+  @@index([fileId])
+  @@index([granteeId])
+}
+
+model StorageUsage {
+  id         String   @id @default(uuid())
+  userId     String   @unique
+  usedBytes  BigInt   @default(0)
+  fileCount  Int      @default(0)
+  quotaBytes BigInt   @default(10737418240) // 10 GB
+  updatedAt  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ---------------------------------------------------------------------------
+// Documents
+// ---------------------------------------------------------------------------
+
+model Document {
+  id            String   @id @default(uuid())
+  ownerId       String
+  title         String
+  category      String?
+  content       Json? // TipTap-compatible structured document
+  status        DocumentStatus @default(DRAFT)
+  wordCount     Int      @default(0)
+  revision      Int      @default(1) // optimistic concurrency token
+  currentVersion Int     @default(1)
+  isDeleted     Boolean  @default(false)
+  deletedAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  lastSavedAt   DateTime?
+
+  owner   User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  versions DocumentVersion[]
+
+  @@index([ownerId, isDeleted, updatedAt])
+  @@index([ownerId, isDeleted, createdAt])
+}
+
+model DocumentVersion {
+  id          String   @id @default(uuid())
+  documentId  String
+  version     Int
+  title       String
+  content     Json?
+  wordCount   Int      @default(0)
+  note        String?
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, version])
+  @@index([documentId, createdAt])
+}
+
+model DocumentTemplateReference {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  category    String
+  content     Json?
+  isBuiltin   Boolean  @default(true)
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  @@index([category])
+}
+
+// ---------------------------------------------------------------------------
+// Achievements (VERA Passport)
+// ---------------------------------------------------------------------------
+
+model Achievement {
+  id          String        @id @default(uuid())
+  ownerId     String
+  type        AchievementType
+  title       String
+  description String?
+  issuer      String? // organisation / institution name (claim, not verification)
+  role        String?
+  url         String? // project or evidence link
+  periodStart DateTime?
+  periodEnd   DateTime?
+  occurredOn  DateTime?
+  visibility  ContentVisibility @default(PRIVATE)
+  // CLAIMED = user-submitted claim. Never set to VERIFIED by Phase 2 code.
+  status      ClaimStatus   @default(CLAIMED)
+  evidenceCount Int         @default(0)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  owner       User                  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  evidence    AchievementEvidence[]
+  skills      AchievementSkill[]
+  history     AchievementHistory[]
+  requests    VerificationRequest[]
+  credentials CredentialRecord[]
+
+  @@index([ownerId, visibility, createdAt])
+  @@index([ownerId, status])
+}
+
+model AchievementEvidence {
+  id            String       @id @default(uuid())
+  achievementId String
+  type          EvidenceType
+  url           String?
+  fileId        String?
+  note          String?
+  addedById     String?
+  createdAt     DateTime     @default(now())
+
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  file        VaultFile?  @relation(fields: [fileId], references: [id], onDelete: SetNull)
+
+  @@index([achievementId])
+}
+
+model AchievementSkill {
+  id            String   @id @default(uuid())
+  achievementId String
+  name          String
+  createdAt     DateTime @default(now())
+
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([achievementId, name])
+  @@index([name])
+}
+
+model AchievementHistory {
+  id            String   @id @default(uuid())
+  achievementId String
+  actorId       String?
+  action        String // CREATED | UPDATED | DELETED | VISIBILITY_CHANGED | STATUS_CHANGED
+  changes       Json?
+  createdAt     DateTime @default(now())
+
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@index([achievementId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Verification foundation (Phase 4 workflows build on this)
+// ---------------------------------------------------------------------------
+
+model VerificationRequest {
+  id             String             @id @default(uuid())
+  requesterId    String
+  achievementId  String?
+  verifierId     String?
+  organizationId String?
+  channel        VerificationChannel @default(ORGANIZATION)
+  status         VerificationStatus  @default(PENDING)
+  message        String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  decidedAt      DateTime?
+
+  requester    User          @relation("VerificationRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  verifier     User?         @relation("VerificationVerifier", fields: [verifierId], references: [id], onDelete: SetNull)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  achievement  Achievement?  @relation(fields: [achievementId], references: [id], onDelete: SetNull)
+  evidence     VerificationEvidence[]
+  events       VerificationEvent[]
+
+  @@index([requesterId, createdAt])
+  @@index([status, createdAt])
+}
+
+model VerificationEvidence {
+  id        String       @id @default(uuid())
+  requestId String
+  type      EvidenceType
+  url       String?
+  fileId    String?
+  note      String?
+  createdAt DateTime     @default(now())
+
+  request VerificationRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+}
+
+model VerificationEvent {
+  id         String             @id @default(uuid())
+  requestId  String
+  actorId    String?
+  action     String
+  fromStatus VerificationStatus?
+  toStatus   VerificationStatus?
+  note       String?
+  createdAt  DateTime           @default(now())
+
+  request VerificationRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId, createdAt])
+}
+
+model CredentialRecord {
+  id                    String           @id @default(uuid())
+  subjectId             String
+  issuerOrganizationId  String?
+  achievementId         String?
+  type                  String           @default("VerifiableCredential")
+  schemaVersion         String           @default("1.0")
+  status                CredentialStatus @default(ISSUED)
+  issuanceDate          DateTime         @default(now())
+  expirationDate        DateTime?
+  // W3C-style metadata. Status fields are NOT cryptographic proof.
+  context               Json?
+  credentialSubject     Json?
+  proof                 Json?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  subject   User          @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  issuer    Organization? @relation(fields: [issuerOrganizationId], references: [id], onDelete: SetNull)
+  achievement Achievement? @relation(fields: [achievementId], references: [id], onDelete: SetNull)
+  statusEvents CredentialStatusEvent[]
+
+  @@index([subjectId, status])
+  @@index([issuerOrganizationId])
+}
+
+model CredentialStatusEvent {
+  id           String           @id @default(uuid())
+  credentialId String
+  fromStatus   CredentialStatus?
+  toStatus     CredentialStatus
+  reason       String?
+  actorId      String?
+  createdAt    DateTime         @default(now())
+
+  credential CredentialRecord @relation(fields: [credentialId], references: [id], onDelete: Cascade)
+
+  @@index([credentialId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Rewards foundation (Phase 4 activates earning/redemption)
+// ---------------------------------------------------------------------------
+
+model RewardAccount {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  balance         BigInt   @default(0) // integer points — never floating point
+  lifetimeEarned  BigInt   @default(0)
+  lifetimeRedeemed BigInt  @default(0)
+  version         Int      @default(0) // optimistic lock for balance updates
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions RewardTransaction[]
+  events       RewardEvent[]
+
+  @@index([userId])
+}
+
+model RewardTransaction {
+  id              String                @id @default(uuid())
+  accountId       String
+  userId          String
+  amount          BigInt // signed: positive credit, negative debit
+  type            RewardTransactionType
+  status          RewardTransactionStatus @default(POSTED)
+  reason          String
+  idempotencyKey  String                @unique
+  relatedType     String?
+  relatedId       String?
+  metadata        Json?
+  createdAt       DateTime              @default(now())
+
+  account RewardAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events  RewardEvent[]
+
+  @@index([userId, createdAt])
+  @@index([accountId, createdAt])
+}
+
+model RewardRule {
+  id             String   @id @default(uuid())
+  code           String   @unique
+  name           String
+  description    String?
+  points         Int
+  active         Boolean  @default(false) // Phase 4 flips rules on
+  cooldownSeconds Int?
+  maxPerUser     Int?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model RewardEvent {
+  id           String   @id @default(uuid())
+  accountId    String
+  eventType    String
+  transactionId String?
+  payload      Json?
+  occurredAt   DateTime @default(now())
+
+  account     RewardAccount      @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  transaction RewardTransaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+
+  @@index([accountId, occurredAt])
+}
+
+// ---------------------------------------------------------------------------
+// Notifications, activity, audit
+// ---------------------------------------------------------------------------
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String?
+  link      String? // deep link to the owning resource
+  data      Json?
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+  @@index([userId, createdAt])
+}
+
+model ActivityEvent {
+  id          String   @id @default(uuid())
+  userId      String
+  type        String
+  title       String
+  subjectType String?
+  subjectId   String?
+  meta        Json?
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String?
+  action     String
+  targetType String?
+  targetId   String?
+  requestId  String?
+  ip         String?
+  userAgent  String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
+  @@index([targetType, targetId])
+}
+
+// ---------------------------------------------------------------------------
+// Sharing
+// ---------------------------------------------------------------------------
+
+model ShareLink {
+  id           String            @id @default(uuid())
+  token        String            @unique // cryptographically random
+  createdById  String
+  resourceType ShareResourceType
+  resourceId   String
+  permission   SharePermission   @default(READ)
+  expiresAt    DateTime?
+  revokedAt    DateTime?
+  maxViews     Int?
+  viewCount    Int               @default(0)
+  createdAt    DateTime          @default(now())
+  lastViewedAt DateTime?
+
+  createdBy User             @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  grants    FileAccessGrant[]
+
+  @@index([createdById, createdAt])
+  @@index([resourceType, resourceId])
+  @@index([expiresAt])
+}
+
+// ---------------------------------------------------------------------------
+// Reliability: jobs, outbox, idempotency, rate limiting
+// ---------------------------------------------------------------------------
+
+model BackgroundJob {
+  id           String    @id @default(uuid())
+  type         String
+  payload      Json
+  status       JobStatus @default(QUEUED)
+  attempts     Int       @default(0)
+  maxAttempts  Int       @default(5)
+  runAt        DateTime  @default(now())
+  startedAt    DateTime?
+  finishedAt   DateTime?
+  lastError    String?
+  dedupeKey    String?   @unique
+  lockedAt     DateTime?
+  lockedBy     String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([status, runAt])
+  @@index([type, status])
+}
+
+model OutboxEvent {
+  id            String        @id @default(uuid())
+  aggregateType String
+  aggregateId   String
+  eventType     String
+  payload       Json
+  sensitive     Boolean       @default(false) // payload must never be logged
+  status        OutboxStatus  @default(PENDING)
+  attempts      Int           @default(0)
+  availableAt   DateTime      @default(now())
+  processedAt   DateTime?
+  lastError     String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([status, availableAt])
+  @@index([aggregateType, aggregateId])
+}
+
+model IdempotencyRecord {
+  key          String            @id
+  userId       String?
+  status       IdempotencyStatus @default(IN_PROGRESS)
+  responseCode Int?
+  responseBody Json?
+  createdAt    DateTime          @default(now())
+  expiresAt    DateTime
+
+  @@index([expiresAt])
+  @@index([userId])
+}
+
+model RateLimitEntry {
+  key       String   @id
+  value     Int      @default(0)
+  expiresAt DateTime
+  updatedAt DateTime @updatedAt
+
+  @@index([expiresAt])
+}
+
+// ---------------------------------------------------------------------------
+// AI foundation (Phase 3) — schema + contracts only, no generation in Phase 2
+// ---------------------------------------------------------------------------
+
+model AiModel {
+  id             String        @id @default(uuid())
+  key            String        @unique // e.g. "llama3.1:8b"
+  provider       AiProviderKind
+  displayName    String
+  baseUrl        String? // resolved from env at runtime for local providers
+  contextWindow  Int?
+  isLocal        Boolean       @default(false)
+  enabled        Boolean       @default(false) // Phase 3 enables
+  costPer1kInputMicros  Int    @default(0) // integer micro-units, never float
+  costPer1kOutputMicros Int    @default(0)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  usage    AiUsageRecord[]
+  messages ChatMessage[]
+
+  @@index([enabled])
+}
+
+model ChatConversation {
+  id        String    @id @default(uuid())
+  userId    String
+  title     String?
+  modelId   String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  archivedAt DateTime?
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+
+  @@index([userId, updatedAt])
+}
+
+model ChatMessage {
+  id             String   @id @default(uuid())
+  conversationId String
+  modelId        String?
+  role           ChatRole
+  content        String
+  tokenCount     Int?
+  metadata       Json?
+  createdAt      DateTime @default(now())
+
+  conversation ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  model        AiModel?         @relation(fields: [modelId], references: [id], onDelete: SetNull)
+
+  @@index([conversationId, createdAt])
+}
+
+model AiUsageRecord {
+  id             String      @id @default(uuid())
+  userId         String
+  modelId        String?
+  conversationId String?
+  operation      AiOperation
+  inputTokens    Int         @default(0)
+  outputTokens   Int         @default(0)
+  costMicros     BigInt      @default(0)
+  requestId      String?
+  createdAt      DateTime    @default(now())
+
+  user  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  model AiModel? @relation(fields: [modelId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([modelId, createdAt])
+}
+
+model DocumentGenerationJob {
+  id             String                @id @default(uuid())
+  userId         String
+  documentId     String?
+  modelId        String?
+  prompt         String
+  status         DocumentGenerationStatus @default(QUEUED)
+  error          String?
+  createdAt      DateTime              @default(now())
+  startedAt      DateTime?
+  finishedAt     DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+}
+
+model AiAccessGrant {
+  id           String         @id @default(uuid())
+  userId       String
+  resourceType AiResourceType
+  resourceId   String
+  granted      Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  revokedAt    DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, resourceType, resourceId])
+  @@index([userId, granted])
+}

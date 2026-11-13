@@ -1,0 +1,281 @@
+﻿
+> vera@0.1.0 lint
+> eslint .
+
+
+E:\OneDrive\Desktop\VERA\scripts\generate-icons.mjs
+  19:7  warning  'INK' is assigned a value but never used   @typescript-eslint/no-unused-vars
+  60:9  warning  'mark' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+E:\OneDrive\Desktop\VERA\src\app\(marketing)\resources\page.tsx
+  8:3  warning  'Keyboard' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\OneDrive\Desktop\VERA\src\components\app\app-shell.tsx
+  20:25  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+E:\OneDrive\Desktop\VERA\src\components\app\app-shell.tsx:20:25
+  18 |   const [menuOpen, setMenuOpen] = React.useState(false);
+  19 |
+> 20 |   React.useEffect(() => setMenuOpen(false), [pathname]);
+     |                         ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  21 |
+  22 |   const openCommand = React.useCallback(() => setCommandOpen(true), []);
+  23 |   const toggleMenu = React.useCallback(() => setMenuOpen((open) => !open), []);  react-hooks/set-state-in-effect
+
+E:\OneDrive\Desktop\VERA\src\components\app\command-palette.tsx
+  115:7   error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+E:\OneDrive\Desktop\VERA\src\components\app\command-palette.tsx:115:7
+  113 |   React.useEffect(() => {
+  114 |     if (!open) {
+> 115 |       setQuery("");
+      |       ^^^^^^^^ Avoid calling setState() directly within an effect
+  116 |       setIndex(0);
+  117 |     } else {
+  118 |       // Focus after paint so Radix has mounted the input  react-hooks/set-state-in-effect
+  124:25  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+E:\OneDrive\Desktop\VERA\src\components\app\command-palette.tsx:124:25
+  122 |   }, [open]);
+  123 |
+> 124 |   React.useEffect(() => setIndex(0), [query]);
+      |                         ^^^^^^^^ Avoid calling setState() directly within an effect
+  125 |
+  126 |   const runCommand = (command: Command) => {
+  127 |     onOpenChange(false);     react-hooks/set-state-in-effect
+
+E:\OneDrive\Desktop\VERA\src\components\app\dashboard-view.tsx
+  74:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+E:\OneDrive\Desktop\VERA\src\components\app\dashboard-view.tsx:74:5
+  72 |
+  73 |   React.useEffect(() => {
+> 74 |     setGreeting(t(GREETING_KEYS[new Date().getHours() % 8]));
+     |     ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  75 |     setHelpDismissed(readStorage(STORAGE_KEYS.dashboardHelp) === "1");
+  76 |     try {
+  77 |       const stored = readStorage("vera-dashboard-checklist");  react-hooks/set-state-in-effect
+
+E:\OneDrive\Desktop\VERA\src\components\app\modules\settings-view.tsx
+  4:16  warning  'Globe' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\OneDrive\Desktop\VERA\src\components\app\modules\vault-view.tsx
+  30:27  warning  'DemoFile' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\OneDrive\Desktop\VERA\src\components\app\modules\verification-view.tsx
+  15:22  warning  'EmptyState' is defined but never used  @typescript-eslint/no-unused-vars
+  18:10  warning  'Badge' is defined but never used       @typescript-eslint/no-unused-vars
+
+E:\OneDrive\Desktop\VERA\src\components\app\sidebar.tsx
+  20:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+E:\OneDrive\Desktop\VERA\src\components\app\sidebar.tsx:20:5
+  18 |
+  19 |   React.useEffect(() => {
+> 20 |     setCollapsed(readStorage(STORAGE_KEYS.sidebar) === "1");
+     |     ^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  21 |     setHydrated(true);
+  22 |   }, []);
+  23 |  react-hooks/set-state-in-effect
+
+E:\OneDrive\Desktop\VERA\src\components\app\topbar.tsx
+   6:10  warning  'useTheme' is defined but never used     @typescript-eslint/no-unused-vars
+  30:16  warning  'useLanguage' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\OneDrive\Desktop\VERA\src\components\auth\sign-up-form.tsx
+  17:21  warning  't' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-unused-vars
+  53:20  warning  Compilation Skipped: Use of incompatible library
+
+This API returns functions which cannot be memoized without leading to stale UI. To prevent this, by default React Compiler will skip memoizing this component/hook. However, you may see issues if values from this API are passed to other components/hooks that are memoized.
+
+E:\OneDrive\Desktop\VERA\src\components\auth\sign-up-form.tsx:53:20
+  51 |   });
+  52 |
+> 53 |   const password = watch("password", "");
+     |                    ^^^^^ React Hook Form's `useForm()` API returns a `watch()` function which cannot be memoized safely.
+  54 |
+  55 |   const onSubmit = async (values: FormValues) => {
+  56 |     setFormError(null);  react-hooks/incompatible-library
+
+E:\OneDrive\Desktop\VERA\src\components\auth\verify-email-panel.tsx
+  23:7  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+E:\OneDrive\Desktop\VERA\src\components\auth\verify-email-panel.tsx:23:7
+  21 |   React.useEffect(() => {
+  22 |     try {
+> 23 |       setEmail(sessionStorage.getItem(STORAGE_KEY));
+     |       ^^^^^^^^ Avoid calling setState() directly within an effect
+  24 |     } catch {
+  25 |       setEmail(null);
+  26 |     }  react-hooks/set-state-in-effect
+
+E:\OneDrive\Desktop\VERA\src\components\i18n\language-provider.tsx
+  52:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+E:\OneDrive\Desktop\VERA\src\components\i18n\language-provider.tsx:52:5
+  50 |     const stored = readStorage(STORAGE_KEYS.locale);
+  51 |     const resolved = isLocale(stored) ? stored : DEFAULT_LOCALE;
+> 52 |     setLocaleState(resolved);
+     |     ^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  53 |     applyToDocument(resolved);
+  54 |     setHydrated(true);
+  55 |   }, []);  react-hooks/set-state-in-effect
+
+E:\OneDrive\Desktop\VERA\src\components\marketing\contact-form.tsx
+  42:27  warning  '_values' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\OneDrive\Desktop\VERA\src\components\marketing\site-header.tsx
+  41:25  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+E:\OneDrive\Desktop\VERA\src\components\marketing\site-header.tsx:41:25
+  39 |   }, []);
+  40 |
+> 41 |   React.useEffect(() => setMobileOpen(false), [pathname]);
+     |                         ^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  42 |
+  43 |   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+  44 |  react-hooks/set-state-in-effect
+
+E:\OneDrive\Desktop\VERA\src\components\marketing\theme-toggle.tsx
+  16:25  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+E:\OneDrive\Desktop\VERA\src\components\marketing\theme-toggle.tsx:16:25
+  14 |   const [mounted, setMounted] = React.useState(false);
+  15 |
+> 16 |   React.useEffect(() => setMounted(true), []);
+     |                         ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  17 |
+  18 |   const current = mounted ? (theme ?? "light") : "light";
+  19 |   const next = current === "light" ? "dark" : current === "dark" ? "system" : "light";  react-hooks/set-state-in-effect
+
+E:\OneDrive\Desktop\VERA\src\components\motion\motion-pref.tsx
+  53:7  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+E:\OneDrive\Desktop\VERA\src\components\motion\motion-pref.tsx:53:7
+  51 |     const stored = readStorage(STORAGE_KEYS.themeMotion);
+  52 |     if (stored === "reduced" || stored === "full" || stored === "system") {
+> 53 |       setPreferenceState(stored);
+     |       ^^^^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  54 |     }
+  55 |     setHydrated(true);
+  56 |   }, []);  react-hooks/set-state-in-effect
+
+E:\OneDrive\Desktop\VERA\src\components\motion\splash-screen.tsx
+  32:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+E:\OneDrive\Desktop\VERA\src\components\motion\splash-screen.tsx:32:5
+  30 |     if (alreadySeen) return;
+  31 |
+> 32 |     setDismissed(false);
+     |     ^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  33 |     setVisible(true);
+  34 |
+  35 |     const finish = () => {  react-hooks/set-state-in-effect
+
+E:\OneDrive\Desktop\VERA\src\components\onboarding\onboarding-guard.tsx
+  23:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+E:\OneDrive\Desktop\VERA\src\components\onboarding\onboarding-guard.tsx:23:5
+  21 |       return;
+  22 |     }
+> 23 |     setReady(true);
+     |     ^^^^^^^^ Avoid calling setState() directly within an effect
+  24 |   }, [router]);
+  25 |
+  26 |   if (!ready) {  react-hooks/set-state-in-effect
+
+E:\OneDrive\Desktop\VERA\src\components\onboarding\onboarding-wizard.tsx
+  115:45  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+E:\OneDrive\Desktop\VERA\src\components\onboarding\onboarding-wizard.tsx:115:45
+  113 |       if (raw) {
+  114 |         const draft = JSON.parse(raw) as Partial<Draft>;
+> 115 |         if (typeof draft.step === "number") setStep(Math.min(draft.step, LAST_STEP));
+      |                                             ^^^^^^^ Avoid calling setState() directly within an effect
+  116 |         if (draft.goal) setGoal(draft.goal);
+  117 |         if (typeof draft.name === "string") setName(draft.name);
+  118 |         if (typeof draft.role === "string") setRole(draft.role);  react-hooks/set-state-in-effect
+
+E:\OneDrive\Desktop\VERA\src\components\ui\tooltip.tsx
+  6:3  warning  'delayDuration' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+✖ 26 problems (13 errors, 13 warnings)
+

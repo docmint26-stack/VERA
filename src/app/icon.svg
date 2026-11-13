@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="VERA">
+  <rect width="64" height="64" rx="14" fill="#FFFFFF" />
+  <rect x="0.5" y="0.5" width="63" height="63" rx="13.5" fill="none" stroke="#E5E7EB" />
+  <g fill="none" stroke="#635BFF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M15 20 L26.8 42.2" />
+    <path d="M50 13 L35.9 42" />
+  </g>
+  <circle cx="15" cy="20" r="5.2" fill="#635BFF" />
+  <circle cx="50" cy="13" r="5.2" fill="#635BFF" />
+  <path fill-rule="evenodd" fill="#635BFF" d="M31.5 44.4 A6.6 6.6 0 1 0 31.5 57.6 A6.6 6.6 0 1 0 31.5 44.4 Z M31.5 48.2 A2.8 2.8 0 1 1 31.5 53.8 A2.8 2.8 0 1 1 31.5 48.2 Z" />
+</svg>
