@@ -5,7 +5,7 @@
     "description": "VERA — Verifiable Reputation & Achievement Network. AI-powered personal workspace and verifiable trust network.",
     "scripts": {
         "dev": "next dev",
-        "build": "next build",
+        "build": "prisma generate --config prisma7.config.ts && next build",
         "start": "next start",
         "lint": "eslint .",
         "typecheck": "tsc --noEmit",
