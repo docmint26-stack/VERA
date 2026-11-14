@@ -26,7 +26,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, IntegrationPending } from "@/components/ui/alert";
-import { PageHeader, EmptyState } from "@/components/ui/empty-state";
+import { DemoBadge, PageHeader, EmptyState } from "@/components/ui/empty-state";
 import {
   Dialog,
   DialogContent,
@@ -84,10 +84,12 @@ export function DocumentsView() {
   }, []);
 
   React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadDocuments().catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Unable to load documents.")).finally(() => setLoading(false));
   }, [loadDocuments]);
 
   const createDocument = async (template: string) => {
+    setError(null);
     const title = template.replace(/([A-Z])/g, " $1").replace(/^./, (char) => char.toUpperCase());
     const response = await fetch("/api/v1/documents", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title, category: title }) });
     if (!response.ok) { setError("Unable to create document."); return; }
@@ -273,7 +275,14 @@ export function DocumentsView() {
         </ul>
       )}
 
-      <NewDocumentDialog open={newOpen} onOpenChange={setNewOpen} onPick={(id) => setOpenId(id)} />
+      {error ? (
+        <Alert variant="error">{error}</Alert>
+      ) : null}
+      {loading && documents.length === 0 ? (
+        <p className="text-sm text-[var(--muted-foreground)]">{t("common.loading")}</p>
+      ) : null}
+
+      <NewDocumentDialog open={newOpen} onOpenChange={setNewOpen} onCreate={createDocument} />
     </div>
   );
 }
@@ -281,11 +290,11 @@ export function DocumentsView() {
 function NewDocumentDialog({
   open,
   onOpenChange,
-  onPick,
+  onCreate,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onPick: (id: string) => void;
+  onCreate: (template: string) => void;
 }) {
   const t = useT();
   return (
@@ -302,7 +311,7 @@ function NewDocumentDialog({
               type="button"
               onClick={() => {
                 onOpenChange(false);
-                onPick(DEMO_DOCUMENTS[0].id);
+                void onCreate(template);
               }}
               className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] p-3.5 text-left transition-colors hover:border-[var(--brand)] hover:bg-[var(--brand-soft)] focus-ring"
             >
