@@ -14,6 +14,7 @@ import { Separator, Kbd } from "@/components/ui/separator";
 import { PasswordInput } from "./password-input";
 import { useT } from "@/components/i18n/language-provider";
 import { cn } from "@/lib/utils";
+import { authClient } from "@/lib/api/auth-client";
 
 const schema = z.object({
   email: z.email("errors.email"),
@@ -42,17 +43,18 @@ export function SignInForm() {
   const onSubmit = async (values: FormValues) => {
     setFormError(null);
 
-    // Phase 1: no identity provider. Recognise the seeded demo account so the
-    // happy path is walkable, reject anything else honestly.
-    if (values.email.toLowerCase() === "demo@vera.app" && values.password === "Password123") {
-      await new Promise((resolve) => setTimeout(resolve, 700));
-      setComplete(true);
-      window.setTimeout(() => router.push("/app"), 650);
+    const result = await authClient.signIn.email({
+      email: values.email,
+      password: values.password,
+      rememberMe: values.remember,
+      callbackURL: "/app",
+    });
+    if (result.error) {
+      setFormError(result.error.message || t("auth.errorInvalid"));
       return;
     }
-
-    await new Promise((resolve) => setTimeout(resolve, 550));
-    setFormError(t("auth.errorInvalid"));
+    setComplete(true);
+    router.replace("/app");
   };
 
   if (complete) {
@@ -76,12 +78,6 @@ export function SignInForm() {
           {t("auth.signInSubtitle")}
         </p>
       </div>
-
-      <Alert variant="warning" title={t("common.awaitingIntegration")}>
-        {t("auth.pendingNotice")} Try{" "}
-        <span className="font-mono text-[0.8125rem]">demo@vera.app</span> /{" "}
-        <span className="font-mono text-[0.8125rem]">Password123</span>.
-      </Alert>
 
       {formError && (
         <Alert variant="error" role="alert">
@@ -157,15 +153,15 @@ export function SignInForm() {
         variant="secondary"
         size="lg"
         className="w-full"
-        onClick={() => setFormError(t("auth.pendingNotice"))}
+        onClick={async () => {
+          const result = await authClient.signIn.social({ provider: "google", callbackURL: "/app" });
+          if (result.error) setFormError(result.error.message || t("auth.pendingNotice"));
+        }}
         aria-describedby="google-pending"
       >
         <GoogleGlyph />
         {t("auth.continueWithGoogle")}
       </Button>
-      <p id="google-pending" className="-mt-3 text-center text-[0.75rem] text-[var(--subtle-foreground)]">
-        {t("common.awaitingIntegration")}
-      </p>
 
       <p className="text-center text-sm text-[var(--muted-foreground)]">
         {t("auth.noAccount")}{" "}

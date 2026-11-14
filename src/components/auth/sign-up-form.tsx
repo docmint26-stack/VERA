@@ -13,6 +13,7 @@ import { Alert } from "@/components/ui/alert";
 import { PasswordInput, PasswordRules, passwordMeetsRules } from "./password-input";
 import { useT } from "@/components/i18n/language-provider";
 import { cn } from "@/lib/utils";
+import { authClient } from "@/lib/api/auth-client";
 
 const makeSchema = () =>
   z
@@ -54,18 +55,18 @@ export function SignUpForm() {
 
   const onSubmit = async (values: FormValues) => {
     setFormError(null);
-    await new Promise((resolve) => setTimeout(resolve, 750));
-
-    if (values.email.toLowerCase() === "demo@vera.app") {
-      setFormError(t("auth.errorEmailTaken"));
+    const result = await authClient.signUp.email({
+      name: values.name,
+      email: values.email,
+      password: values.password,
+      callbackURL: "/verify-email",
+    });
+    if (result.error) {
+      setFormError(result.error.message || t("auth.errorEmailTaken"));
       return;
     }
-
-    // Phase 1: nothing is stored. Hand the address to the verification screen
-    // so the flow can be walked end to end.
-    sessionStorage.setItem("vera-pending-email", values.email);
     setComplete(true);
-    window.setTimeout(() => router.push("/verify-email"), 700);
+    router.replace("/verify-email");
   };
 
   if (complete) {
@@ -89,10 +90,6 @@ export function SignUpForm() {
           {t("auth.signUpSubtitle")}
         </p>
       </div>
-
-      <Alert variant="warning" title={t("common.awaitingIntegration")}>
-        {t("auth.pendingNotice")}
-      </Alert>
 
       {formError && (
         <Alert variant="error" role="alert">

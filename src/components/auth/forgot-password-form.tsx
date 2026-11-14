@@ -12,6 +12,7 @@ import { FieldLabel, FieldError } from "@/components/ui/label";
 import { Alert } from "@/components/ui/alert";
 import { SuccessCheckmark } from "@/components/motion/success-checkmark";
 import { useT } from "@/components/i18n/language-provider";
+import { authClient } from "@/lib/api/auth-client";
 
 const schema = z.object({ email: z.email("errors.email") });
 type FormValues = z.infer<typeof schema>;
@@ -19,6 +20,7 @@ type FormValues = z.infer<typeof schema>;
 export function ForgotPasswordForm() {
   const t = useT();
   const [sent, setSent] = React.useState(false);
+  const [formError, setFormError] = React.useState<string | null>(null);
 
   const {
     register,
@@ -30,8 +32,16 @@ export function ForgotPasswordForm() {
     mode: "onBlur",
   });
 
-  const onSubmit = async () => {
-    await new Promise((resolve) => setTimeout(resolve, 700));
+  const onSubmit = async (values: FormValues) => {
+    setFormError(null);
+    const result = await authClient.requestPasswordReset({
+      email: values.email,
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (result.error) {
+      setFormError(result.error.message || t("auth.resetSubtitle"));
+      return;
+    }
     setSent(true);
   };
 
@@ -65,6 +75,7 @@ export function ForgotPasswordForm() {
         </p>
       </div>
 
+      {formError && <Alert variant="error" role="alert">{formError}</Alert>}
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-5">
         <div className="flex flex-col gap-2">
           <FieldLabel htmlFor="forgot-email" required>

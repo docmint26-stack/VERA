@@ -1,0 +1,60 @@
+openapi: 3.1.0
+info:
+  title: VERA API
+  version: 0.1.0
+  description: Versioned application API. Better Auth routes remain under /api/auth.
+servers:
+  - url: http://localhost:3000
+paths:
+  /api/health:
+    get:
+      operationId: health
+      security: []
+      responses:
+        '200': { description: Liveness response }
+  /api/ready:
+    get:
+      operationId: readiness
+      security: []
+      responses:
+        '200': { description: Ready }
+        '503': { description: Not ready }
+  /api/v1/me:
+    get:
+      operationId: getMe
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { description: Current user and profile }
+        '401': { description: Unauthenticated }
+    patch:
+      operationId: updateMe
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object } } }
+      responses:
+        '200': { description: Updated user and profile }
+  /api/v1/documents:
+    get:
+      operationId: listDocuments
+      security: [{ sessionCookie: [] }]
+      responses: { '200': { description: Paginated document list } }
+    post:
+      operationId: createDocument
+      security: [{ sessionCookie: [] }]
+      responses: { '201': { description: Created document } }
+  /api/v1/achievements:
+    get:
+      operationId: listAchievements
+      security: [{ sessionCookie: [] }]
+      responses: { '200': { description: Paginated achievement list } }
+    post:
+      operationId: createAchievement
+      security: [{ sessionCookie: [] }]
+      responses: { '201': { description: Created claim } }
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: vera.session_token

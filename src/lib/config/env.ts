@@ -20,6 +20,9 @@ const optionalPair = (a: string, b: string, message: string) =>
     .transform(([x, y]) => [x || "", y || ""] as const)
     .optional();
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _optionalPair = optionalPair;
+
 const schema = z
   .object({
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),

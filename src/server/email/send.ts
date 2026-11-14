@@ -104,7 +104,7 @@ function getProviderName() {
 
 /** Used by the background worker: claim due PENDING/FAILED outbox entries. */
 export async function claimDueOutbox(limit = 10): Promise<
-  Array<{ id: string; eventType: string; payload: unknown }>
+  Array<{ id: string; eventType: string; payload: unknown; attempts: number }>
 > {
   const db = getDb();
   const now = new Date();
@@ -119,7 +119,7 @@ export async function claimDueOutbox(limit = 10): Promise<
     where: { id: { in: ids }, status: { in: ["PENDING", "FAILED"] } },
     data: { status: "PROCESSING" },
   });
-  return due.map((e) => ({ id: e.id, eventType: e.eventType, payload: e.payload }));
+  return due.map((e) => ({ id: e.id, eventType: e.eventType, payload: e.payload, attempts: e.attempts }));
 }
 
 export async function completeOutbox(id: string, result: EmailSendResult, attempt: number): Promise<void> {

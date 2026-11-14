@@ -7,7 +7,7 @@ import type { ObjectStorageProvider } from "./types";
 
 export { StorageError } from "./types";
 export type { ObjectStorageProvider, PutResult, PresignedDownload } from "./types";
-export { scanUpload, sanitizeFilename, staticValidate } from "./scan";
+export { declaredUploadAllowed, scanUpload, sanitizeFilename, staticValidate } from "./scan";
 
 let instance: ObjectStorageProvider | null = null;
 

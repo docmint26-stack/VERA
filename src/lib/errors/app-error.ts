@@ -16,6 +16,7 @@ export type ErrorCode =
   | "UNSUPPORTED_MEDIA_TYPE"
   | "PRECONDITION_FAILED"
   | "QUOTA_EXCEEDED"
+  | "BAD_REQUEST"
   | "SERVICE_UNAVAILABLE"
   | "INTERNAL_ERROR";
 
@@ -30,6 +31,7 @@ const STATUS_BY_CODE: Record<ErrorCode, number> = {
   UNSUPPORTED_MEDIA_TYPE: 415,
   PRECONDITION_FAILED: 412,
   QUOTA_EXCEEDED: 413,
+  BAD_REQUEST: 400,
   SERVICE_UNAVAILABLE: 503,
   INTERNAL_ERROR: 500,
 };
@@ -76,6 +78,7 @@ export const errors = {
   payloadTooLarge: (message = "The uploaded file is too large.") => new AppError("PAYLOAD_TOO_LARGE", message),
   unsupportedMedia: (message = "That file type is not allowed.") => new AppError("UNSUPPORTED_MEDIA_TYPE", message),
   preconditionFailed: (message: string, details?: unknown) => new AppError("PRECONDITION_FAILED", message, { details }),
+  badRequest: (message = "Bad request.") => new AppError("BAD_REQUEST", message),
   unavailable: (message = "Service temporarily unavailable.") => new AppError("SERVICE_UNAVAILABLE", message),
   internal: (message = "Something went wrong.") => new AppError("INTERNAL_ERROR", message),
 };

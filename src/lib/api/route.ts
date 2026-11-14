@@ -124,11 +124,11 @@ export function apiRoute<Body extends z.ZodType, Query extends z.ZodType>(
 ) {
   const authRequirement = options.auth ?? "required";
 
-  return async function handler(req: NextRequest, routeCtx?: { params?: Promise<Record<string, string>> }): Promise<Response> {
+  return async function handler(req: NextRequest, routeCtx?: { params?: Promise<unknown> }): Promise<Response> {
     const requestId = newRequestId();
     const started = Date.now();
     const ip = clientIp(req);
-    const params = routeCtx?.params ? await routeCtx.params : {};
+    const params = routeCtx?.params ? (await routeCtx.params) as Record<string, string> : {};
     const url = new URL(req.url);
 
     let user: AuthUser | null = null;

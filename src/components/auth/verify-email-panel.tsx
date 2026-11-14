@@ -8,6 +8,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { useT } from "@/components/i18n/language-provider";
 import { cn } from "@/lib/utils";
+import { authClient } from "@/lib/api/auth-client";
 
 const STORAGE_KEY = "vera-pending-email";
 
@@ -25,10 +26,11 @@ export function VerifyEmailPanel() {
   const [resentAt, setResentAt] = React.useState<number | null>(null);
 
   const resend = async () => {
+    if (!email) return;
     setResending(true);
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    const result = await authClient.sendVerificationEmail({ email, callbackURL: "/app" });
     setResending(false);
-    setResentAt(Date.now());
+    if (!result.error) setResentAt(Date.now());
   };
 
   return (

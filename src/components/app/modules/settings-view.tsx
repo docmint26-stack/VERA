@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Bell, Monitor, Moon, Palette, Shield, Sun, User, Zap } from "lucide-react";
-import { PageHeader, DemoBadge } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,24 +28,46 @@ export function SettingsView() {
   const { locale, setLocale } = useLanguage();
   const { push } = useToast();
   const [saved, setSaved] = React.useState(false);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
   const [profile, setProfile] = React.useState({
-    name: "Ayaan Rahman",
-    email: "demo@vera.app",
-    headline: "Product designer",
-    location: "Dhaka, BD",
+    name: "",
+    email: "",
+    headline: "",
+    location: "",
   });
   const [toggles, setToggles] = React.useState({
-    emailDigest: true,
-    opportunityAlerts: true,
-    verificationUpdates: true,
+    emailDigest: false,
+    opportunityAlerts: false,
+    verificationUpdates: false,
     marketing: false,
     reducedMotion: false,
   });
 
-  const flip = (key: keyof typeof toggles) => (next: boolean) =>
-    setToggles((state) => ({ ...state, [key]: next }));
+  React.useEffect(() => {
+    void fetch("/api/v1/me", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Unable to load settings.");
+        const payload = (await response.json()) as { data: { user: { name: string; email: string }; profile?: { headline?: string | null; location?: string | null } | null; preferences?: typeof toggles | null } };
+        const data = payload.data;
+        setProfile({ name: data.user.name, email: data.user.email, headline: data.profile?.headline ?? "", location: data.profile?.location ?? "" });
+        if (data.preferences) setToggles((current) => ({ ...current, ...data.preferences }));
+      })
+      .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Unable to load settings."))
+      .finally(() => setLoading(false));
+  }, []);
 
-  const saveProfile = () => {
+  const flip = (key: keyof typeof toggles) => (next: boolean) => {
+    setToggles((state) => ({ ...state, [key]: next }));
+    if (key !== "reducedMotion") {
+      void fetch("/api/v1/me/preferences", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ [key === "marketing" ? "marketingEmails" : key]: next }) });
+    }
+  };
+
+  const saveProfile = async () => {
+    setError(null);
+    const response = await fetch("/api/v1/me", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: profile.name, headline: profile.headline, location: profile.location }) });
+    if (!response.ok) { setError("Unable to save your profile."); return; }
     setSaved(true);
     push({ title: t("common.saved"), description: t("settings.profileNote"), variant: "success" });
     window.setTimeout(() => setSaved(false), 2000);
@@ -58,13 +80,14 @@ export function SettingsView() {
         description={t("settings.subtitle")}
         actions={
           <>
-            <Button variant="primary" onClick={saveProfile}>
+            <Button variant="primary" onClick={() => void saveProfile()} loading={loading}>
               {saved ? t("common.saved") : t("actions.save")}
             </Button>
-            <DemoBadge label={t("common.localOnly")} />
           </>
         }
       />
+
+      {error && <Alert variant="error" role="alert">{error}</Alert>}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="surface-card p-5" aria-labelledby="settings-profile">
@@ -208,7 +231,7 @@ export function SettingsView() {
               label={t("settings.marketingEmails")}
               description={t("settings.marketingEmailsNote")}
               checked={toggles.marketing}
-              onChange={flip("marketing")}
+                onChange={flip("marketing")}
             />
           </div>
         </section>

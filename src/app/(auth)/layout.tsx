@@ -5,6 +5,10 @@ import { ThemeToggle } from "@/components/marketing/theme-toggle";
 import { LocaleSwitcher } from "@/components/marketing/locale-switcher";
 import { SITE } from "@/lib/constants";
 
+// Auth pages may read URL state (for example, an expiring reset token).
+// Opt this segment out of instant prerendering under Cache Components.
+export const instant = false;
+
 /**
  * Split layout used by every authentication route: a branded panel that
  * explains where you are, and a focused form column with no site chrome.

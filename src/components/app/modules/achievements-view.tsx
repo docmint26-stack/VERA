@@ -2,14 +2,14 @@
 
 import * as React from "react";
 import { Award, FileCheck2, Send, ShieldCheck } from "lucide-react";
-import { PageHeader, EmptyState, DemoBadge } from "@/components/ui/empty-state";
+import { PageHeader, EmptyState } from "@/components/ui/empty-state";
 import { Progress } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { VerificationBadge, toVerificationStatus } from "@/components/motion/verification-status";
 import { useT } from "@/components/i18n/language-provider";
-import { DEMO_ACHIEVEMENTS } from "@/lib/demo-data";
+import type { DemoAchievement } from "@/lib/demo-data";
 import { cn } from "@/lib/utils";
 
 type Filter = "all" | "verified" | "claim";
@@ -29,8 +29,37 @@ const STATUS_ICON: Record<string, React.ComponentType<{ className?: string }>> =
 export function AchievementsView() {
   const t = useT();
   const [filter, setFilter] = React.useState<Filter>("all");
+  const [items, setItems] = React.useState<DemoAchievement[]>([]);
+  const [loading, setLoading] = React.useState(true);
 
-  const items = DEMO_ACHIEVEMENTS.filter((item) => {
+  const load = React.useCallback(async () => {
+    const response = await fetch("/api/v1/achievements?limit=50", { cache: "no-store" });
+    if (!response.ok) throw new Error("Unable to load achievements.");
+    const payload = (await response.json()) as { data: { items: Array<{ id: string; title: string; type: string; issuer: string | null; occurredOn: string | null; createdAt: string; status: string; evidenceCount: number }> } };
+    setItems(payload.data.items.map((item) => ({
+      id: item.id,
+      title: item.title,
+      type: item.type,
+      issuer: item.issuer ?? "Self-reported",
+      date: new Date(item.occurredOn ?? item.createdAt).toLocaleDateString(),
+      status: (item.status === "VERIFIED" ? "issuerVerified" : item.status === "REJECTED" ? "rejected" : item.status === "REVOKED" ? "revoked" : "submitted") as DemoAchievement["status"],
+      evidence: item.evidenceCount,
+    })));
+  }, []);
+
+  // The fetch resolves asynchronously; state updates are intentionally tied
+  // to that external request rather than performed during render.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  React.useEffect(() => { void load().finally(() => setLoading(false)); }, [load]);
+
+  const submitAchievement = async () => {
+    const title = window.prompt("Achievement title");
+    if (!title?.trim()) return;
+    const response = await fetch("/api/v1/achievements", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "PROJECT", title: title.trim(), visibility: "PRIVATE" }) });
+    if (response.ok) await load();
+  };
+
+  const filteredItems = items.filter((item) => {
     if (filter === "all") return true;
     const status = toVerificationStatus(item.status);
     return filter === "verified"
@@ -38,13 +67,13 @@ export function AchievementsView() {
       : status === "submitted" || status === "ai-assessed";
   });
 
-  const verifiedCount = DEMO_ACHIEVEMENTS.filter((item) => {
+  const verifiedCount = items.filter((item) => {
     const status = toVerificationStatus(item.status);
     return status === "issuer-verified" || status === "source-corroborated";
   }).length;
 
-  const evidenceTotal = DEMO_ACHIEVEMENTS.reduce((sum, item) => sum + item.evidence, 0);
-  const percent = Math.round((verifiedCount / DEMO_ACHIEVEMENTS.length) * 100);
+  const evidenceTotal = items.reduce((sum, item) => sum + item.evidence, 0);
+  const percent = items.length ? Math.round((verifiedCount / items.length) * 100) : 0;
 
   return (
     <div className="flex flex-col gap-5">
@@ -53,8 +82,7 @@ export function AchievementsView() {
         description={t("achievements.subtitle")}
         actions={
           <>
-            <Button variant="primary">{t("achievements.submit")}</Button>
-            <DemoBadge label={t("common.localOnly")} />
+            <Button variant="primary" onClick={() => void submitAchievement()}>{t("achievements.submit")}</Button>
           </>
         }
       />
@@ -63,7 +91,7 @@ export function AchievementsView() {
         <p className="flex items-center gap-2 text-sm">
           <Award className="h-4 w-4 text-[var(--warning)]" aria-hidden="true" />
           <span className="tabular-nums">
-            {verifiedCount} / {DEMO_ACHIEVEMENTS.length}
+            {verifiedCount} / {items.length}
           </span>
           <span className="text-[var(--muted-foreground)]">{t("status.issuerVerified")}</span>
         </p>
@@ -93,7 +121,7 @@ export function AchievementsView() {
         </div>
       </div>
 
-      {items.length === 0 ? (
+      {loading ? <div className="surface-card p-6 text-sm text-[var(--muted-foreground)]">{t("common.loading")}</div> : filteredItems.length === 0 ? (
         <EmptyState
           icon={Award}
           title={t("achievements.empty")}
@@ -102,7 +130,7 @@ export function AchievementsView() {
         />
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map((item) => {
+          {filteredItems.map((item) => {
             const status = toVerificationStatus(item.status);
             const Icon = STATUS_ICON[status] ?? Award;
             return (
@@ -136,7 +164,7 @@ export function AchievementsView() {
         </ul>
       )}
 
-      <Alert variant="info">{t("achievements.submitPending")}</Alert>
+      <Alert variant="info">Claims are stored as unverified until a real verification workflow confirms them.</Alert>
       <div className="flex justify-end">
         <Button variant="secondary" size="sm">
           {t("achievements.mySubmissions")}

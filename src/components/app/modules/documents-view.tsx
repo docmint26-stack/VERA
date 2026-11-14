@@ -26,7 +26,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, IntegrationPending } from "@/components/ui/alert";
-import { DemoBadge, PageHeader, EmptyState } from "@/components/ui/empty-state";
+import { PageHeader, EmptyState } from "@/components/ui/empty-state";
 import {
   Dialog,
   DialogContent,
@@ -36,7 +36,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useT } from "@/components/i18n/language-provider";
-import { DEMO_DOCUMENTS, type DemoDocument } from "@/lib/demo-data";
+import type { DemoDocument } from "@/lib/demo-data";
 import { cn } from "@/lib/utils";
 
 const CATEGORIES = [
@@ -72,19 +72,42 @@ export function DocumentsView() {
   const [view, setView] = React.useState<"grid" | "list">("grid");
   const [openId, setOpenId] = React.useState<string | null>(null);
   const [newOpen, setNewOpen] = React.useState(false);
+  const [documents, setDocuments] = React.useState<DemoDocument[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const loadDocuments = React.useCallback(async () => {
+    const response = await fetch("/api/v1/documents?limit=50", { cache: "no-store" });
+    if (!response.ok) throw new Error("Unable to load documents.");
+    const payload = (await response.json()) as { data: { items: Array<{ id: string; title: string; category: string | null; wordCount: number; status: string; updatedAt: string; revision: number }> } };
+    setDocuments(payload.data.items.map((item) => ({ id: item.id, title: item.title, category: item.category ?? "Uncategorized", updatedAt: new Date(item.updatedAt).toLocaleDateString(), words: item.wordCount, status: item.status === "PUBLISHED" ? "published" : "draft", revision: item.revision })));
+  }, []);
+
+  React.useEffect(() => {
+    void loadDocuments().catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Unable to load documents.")).finally(() => setLoading(false));
+  }, [loadDocuments]);
+
+  const createDocument = async (template: string) => {
+    const title = template.replace(/([A-Z])/g, " $1").replace(/^./, (char) => char.toUpperCase());
+    const response = await fetch("/api/v1/documents", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title, category: title }) });
+    if (!response.ok) { setError("Unable to create document."); return; }
+    const payload = (await response.json()) as { data: { id: string } };
+    await loadDocuments();
+    setOpenId(payload.data.id);
+  };
 
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
-    const items = DEMO_DOCUMENTS.filter((doc) => {
+    const items = documents.filter((doc) => {
       const matchesQuery = !q || doc.title.toLowerCase().includes(q);
       const matchesCategory = category === "All" || doc.category === category;
       return matchesQuery && matchesCategory;
     });
     if (sort === "name") return [...items].sort((a, b) => a.title.localeCompare(b.title));
     return items;
-  }, [query, category, sort]);
+  }, [documents, query, category, sort]);
 
-  const open = DEMO_DOCUMENTS.find((doc) => doc.id === openId) ?? null;
+  const open = documents.find((doc) => doc.id === openId) ?? null;
 
   if (open) {
     return <DocumentEditor document={open} onBack={() => setOpenId(null)} />;

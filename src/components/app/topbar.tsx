@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Bell,
   Check,
@@ -31,6 +31,7 @@ import { WORKSPACE_NAV, UTILITY_NAV, isActivePath } from "./nav-config";
 import { ThemeToggle } from "@/components/marketing/theme-toggle";
 import { LocaleSwitcher } from "@/components/marketing/locale-switcher";
 import { cn } from "@/lib/utils";
+import { authClient } from "@/lib/api/auth-client";
 
 const NOTIFICATIONS = [
   { id: "n1", title: "Welcome to VERA", body: "Your workspace is ready. Start with the dashboard checklist.", time: "now", unread: true },
@@ -49,8 +50,10 @@ export function Topbar({
 }) {
   const t = useT();
   const pathname = usePathname();
+  const router = useRouter();
   const [notificationsOpen, setNotificationsOpen] = React.useState(false);
   const [read, setRead] = React.useState<Record<string, boolean>>({});
+  const { data: session } = authClient.useSession();
 
   const unreadCount = NOTIFICATIONS.filter((n) => n.unread && !read[n.id]).length;
 
@@ -177,15 +180,15 @@ export function Topbar({
                 aria-label={t("nav.account")}
                 className="flex items-center gap-1.5 rounded-full focus-ring ml-1"
               >
-                <UserAvatar name="Ayaan Rahman" className="h-8 w-8" />
+                <UserAvatar name={session?.user.name ?? "VERA user"} className="h-8 w-8" />
                 <ChevronsUpDown className="hidden h-3.5 w-3.5 text-[var(--muted-foreground)] sm:block" aria-hidden="true" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>
-                <span className="block text-sm font-semibold">Ayaan Rahman</span>
+                <span className="block text-sm font-semibold">{session?.user.name ?? "VERA user"}</span>
                 <span className="block truncate text-[0.75rem] font-normal text-[var(--muted-foreground)]">
-                  demo@vera.app
+                  {session?.user.email ?? ""}
                 </span>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
@@ -208,11 +211,14 @@ export function Topbar({
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/signin">
+              <DropdownMenuItem
+                onClick={async () => {
+                  await authClient.signOut();
+                  router.push("/signin");
+                }}
+              >
                   <LogOut className="h-4 w-4" aria-hidden="true" />
                   {t("actions.signOut")}
-                </Link>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -246,9 +252,9 @@ export function Topbar({
             })}
           </ul>
           <div className="mt-5 border-t border-[var(--divider)] pt-4">
-            <Link href="/signin" className={cn(buttonVariants({ variant: "secondary", size: "lg" }), "w-full")}>
+            <button type="button" onClick={async () => { await authClient.signOut(); router.push("/signin"); }} className={cn(buttonVariants({ variant: "secondary", size: "lg" }), "w-full")}>
               {t("actions.signOut")}
-            </Link>
+            </button>
           </div>
         </nav>
       </Sheet>

@@ -40,10 +40,10 @@ export class LocalFsStorage implements ObjectStorageProvider {
     let size = 0;
     let tooLarge = false;
 
-    const source = Buffer.isBuffer(data)
-      ? async function* () {
+    const source: AsyncIterable<Buffer> | NodeJS.ReadableStream = Buffer.isBuffer(data)
+      ? (async function* () {
           yield data;
-        }
+        })()
       : data;
 
     const limit = async function* (input: AsyncIterable<Buffer> | NodeJS.ReadableStream): AsyncGenerator<Buffer> {

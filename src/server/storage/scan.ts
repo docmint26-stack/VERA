@@ -26,7 +26,6 @@ export interface ScanResult {
 export function sanitizeFilename(raw: string): string {
   const base = raw.split(/[\\/]/).pop() ?? "file";
   const cleaned = base
-    // eslint-disable-next-line no-control-regex
     .replace(/[\u0000-\u001f\u007f]/g, "")
     .replace(/^\.+/, "")
     .replace(/[<>:"|?*]/g, "_")
@@ -111,6 +110,13 @@ const ZIP_CONTAINER = new Set([
   "application/vnd.ms-excel",
   "application/vnd.ms-powerpoint",
 ]);
+
+/** Validate only the client-declared type before bytes exist. */
+export function declaredUploadAllowed(declaredMime: string, filename: string): boolean {
+  const ext = filename.toLowerCase().includes(".") ? filename.toLowerCase().slice(filename.lastIndexOf(".")) : "";
+  const mime = declaredMime.split(";")[0].trim().toLowerCase();
+  return !BLOCKED_EXT.includes(ext) && !BLOCKED_MIME.includes(mime) && ALLOWED_MIME.has(mime);
+}
 
 function isMostlyText(b: Buffer): boolean {
   if (b.length === 0) return true;
@@ -272,7 +278,10 @@ export async function scanUpload(buffer: Buffer, declaredMime: string, filename:
   if (staticResult.status !== "CLEAN") return staticResult;
 
   if (!getFeatures().clamav) {
-    return { engine: "static-v1", status: "CLEAN", message: staticResult.message ?? "static validation passed" };
+    // Static validation is useful for rejecting malformed content, but it is
+    // not malware scanning. Keep the object quarantined until ClamAV (or a
+    // reviewed equivalent) is configured.
+    return { engine: "static-v1", status: "ERROR", message: "malware scanner is not configured" };
   }
 
   const av = await clamavScan(buffer);

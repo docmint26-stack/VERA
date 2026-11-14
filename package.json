@@ -13,7 +13,11 @@
         "test:watch": "vitest",
         "test:e2e": "playwright test",
         "icons": "node scripts/generate-icons.mjs",
-        "verify": "npm run typecheck && npm run lint && npm run test"
+        "verify": "npm run typecheck && npm run lint && npm run test",
+        "db:start": "tsx scripts/db.ts start",
+        "db:migrate": "prisma migrate deploy --config prisma7.config.ts",
+        "db:generate": "prisma generate --config prisma7.config.ts",
+        "worker": "tsx scripts/worker.ts"
     },
     "dependencies": {
         "@aws-sdk/client-s3": "^3.1168.0",
